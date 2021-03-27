@@ -13,20 +13,17 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-#define READER 0
-#define WRITER 1
+int fpipe_rhs(char** cheddar);
 
-int tpipe_rhs(char** cheddar);
-
-char** purse(char* input, char* cheddar[])
+char** purse(char* input, char** cheddar)
 {
     int numbers = 0;
     const char limit[2] = {' ', '\t'};
     char* coin;
-    
+    //strtok breqaks a string into a series of tokens, must use a delimiter.
     coin = strtok(input, limit);
     cheddar[0] = coin;
-
+    //malloc allocates the memory and returns a pointer to it. need to use malloc to allocate the memory 
     char** detour = malloc(2 * sizeof(char*));
     for(int x = 0; x < 2; ++x)
         detour[x] = malloc(BUFSIZ * sizeof(char));
@@ -41,27 +38,27 @@ char** purse(char* input, char* cheddar[])
         if(!strncmp(coin, ">", 1))
         {
             coin = strtok(NULL, limit);
-            detour[0] = "o";
+            detour[0] = "x"; 
             detour[1] = coin;
             return detour;
         }
         else if(!strncmp(coin, "<", 1))
         {
             coin = strtok(NULL, limit);
-            detour[0] = "i";
+            detour[0] = "y";
             detour[1] = coin;
             return detour;
         }
         else if(!strncmp(coin, "|", 1))
         {
-            detour[0] = "p";
+            detour[0] = "z";
         }
-        cheddar[++numbers] = coin;
+        cheddar[numbers++] = coin;
     }
     return detour;
 }
 
-int main(int argc, const char* argv[])
+int main(int c, const char** d)
 {
     char input [BUFSIZ];
     char mars   [BUFSIZ]; 
@@ -76,9 +73,9 @@ int main(int argc, const char* argv[])
         fflush(stdout);
         fgets(input, BUFSIZ, stdin);
         input[strlen(input) - 1] = '\0';
-        if(strncmp(input, "exit", 4) == 0)
+        if(strncmp(input, "exit", 1) == 0)
             return 0;
-        if(strncmp(input, "!!", 2))
+        if(strncmp(input, "!!", 1))
             strcpy(mars, input);
         bool wewait = true;
         char* waitfor = strstr(input, "&");
@@ -101,7 +98,9 @@ int main(int argc, const char* argv[])
         }
         else
         {
-            //not really too sure what is going on here, had to get help
+            //cheddar[BUFSIZ];
+            //memset(cheddar, 0, BUFSIZ * sizeof);
+            //strncmp(input, "!!", 2)
             char* cheddar[BUFSIZ];
             memset(cheddar, 0, BUFSIZ * sizeof(char));
             int value = 0;
@@ -110,16 +109,17 @@ int main(int argc, const char* argv[])
             char** redirect = purse((value ? mars : input), cheddar);
             if(value && mars[0]== '\0')
             {
+                //print out if a command has not been used
                 printf("NO COMMAND IN MEMORY \n");
                 exit(0);
             }
-            if(!strncmp(redirect[0], "o", 1))
+            if(!strncmp(redirect[0], "x", 1))
             {
                 printf("OUTPUT SAVED TO ./%s\n", redirect[1]);
                 int fileD = open(redirect[1], O_TRUNC | O_CREAT | O_RDWR);
                 dup2(fileD, STDOUT_FILENO);
             }
-        else if(!strncmp(redirect[0], "i", 1))
+        else if(!strncmp(redirect[0], "y", 1))
         {
             printf("READING FROM FILE: ./%s\n", redirect[1]);
             int fileD = open(redirect[1], O_RDONLY);
@@ -129,10 +129,10 @@ int main(int argc, const char* argv[])
             input[strlen(input) - 1]  = '\0';
             purse(input, cheddar);
         }
-        else if (!strncmp(redirect[0], "p", 1))
+        else if (!strncmp(redirect[0], "z", 1))
         {
             pid_t pidc;
-            int rhs_o = tpipe_rhs(cheddar);
+            int rhs_o = fpipe_rhs(cheddar);
             cheddar[rhs_o] = "\0";
             int e = pipe(fdpi);
             if(e < 0)
@@ -161,15 +161,15 @@ int main(int argc, const char* argv[])
         }
         if(pidc != 0)
         { 
-            dup2(fdpi[WRITER], STDOUT_FILENO);
-            close(fdpi[WRITER]);
+            dup2(fdpi[1], STDOUT_FILENO);
+            close(fdpi[1]);
             execvp(lhs[0], lhs);
             exit(0); 
         }
         else
         {
-            dup2(fdpi[READER], STDIN_FILENO);
-            close(fdpi[READER]);
+            dup2(fdpi[0], STDIN_FILENO);
+            close(fdpi[0]);
             execvp(rhs[0], rhs);
             exit(0);  
         }
@@ -182,20 +182,86 @@ int main(int argc, const char* argv[])
     return 0;
 }
 
-//finds the pipe
-int tpipe_rhs(char** cheddar)
+//finds the pipe character
+
+int fpipe_rhs(char* cheddar[])
 {
-    int i = 0;
-    while(cheddar[i] != NULL)
-    {
-        if(!strncmp(cheddar[i], "|", 1))
-        {
-            return i;
-        }
-        i++;
-    }
-    return -1;
+    char *z = strstr(cheddar, "|");
+    int x = atoi(z);
+    return x;
 }
+
+//--------------------------------------------------------------
+//experimental code
+//--------------------------------------------------------------
+// char** purse(char* input, char** cheddar)
+// {
+//     int numbers = 0;
+//     const char limit[2] = {' ', '\t'};
+//     char* coin;
+//     //strtok breqaks a string into a series of tokens, must use a delimiter.
+//     coin = strtok(input, limit);
+//     cheddar[0] = coin;
+//     //malloc allocates the memory and returns a pointer to it. need to use malloc to allocate the memory 
+//     char** detour = malloc(2 * sizeof(char*));
+//     for(int x = 0; x < 2; ++x)
+//         detour[x] = malloc(BUFSIZ * sizeof(char));
+//         detour[0] = "";
+//         detour[1] = "";
+
+//     while(coin != NULL)
+//     {
+//         coin = strtok(NULL, limit);
+//         if(coin == NULL)
+//         break;
+//         if(!strncmp(coin, ">", 1))
+//         {
+//             coin = strtok(NULL, limit);
+
+//             detour[1] = coin;
+//             detour[0] = "x";  
+//             return detour;
+//         }
+//         else if(!strncmp(coin, "<", 1))
+//         {
+//             coin = strtok(NULL, limit);
+
+//             detour[1] = coin;
+//             detour[0] = "y";
+//             return detour;
+//         }
+//         else if(!strncmp(coin, "|", 1))
+//         {
+//             detour[0] = "z";
+//         }
+//         cheddar[numbers++] = coin;
+//     }
+//     return detour;
+// }
+
+// int fpipe_rhs(char* cheddar[])
+// {
+// char find = '|';
+// const char *ptr = strchr(cheddar, find);
+// if(ptr)
+// {
+//     int index = ptr - cheddar;
+// }
+// return index;
+// }
+
+// int fpipe_rhs(char* cheddar[])
+// {
+//     char haystack[] = cheddar;
+//     char * needle;
+//     needle = strstr(cheddar, '|');
+//     int x = atoi(needle);
+//     return x;
+// }
+
+//----------------------------------------------------------------------
+//end of experimental code
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 //OUTPUT FOR shell.c
@@ -211,7 +277,147 @@ int tpipe_rhs(char** cheddar)
                       
 // osh> ls
 // CriticalRegion.c  mutexes.c  out  Philosophers.c  pingpong.c  Project-1-CPCS-351  shell  shell.c  shell_skeleton.c  Simple-Semaphores
-// osh> exit
+
+// osh> find
+// .
+// ./Philosophers.c
+// ./shell
+// ./Simple-Semaphores
+// ./Simple-Semaphores/.git
+// ./Simple-Semaphores/.git/info
+// ./Simple-Semaphores/.git/info/exclude
+// ./Simple-Semaphores/.git/branches
+// ./Simple-Semaphores/.git/refs
+// ./Simple-Semaphores/.git/refs/tags
+// ./Simple-Semaphores/.git/refs/heads
+// ./Simple-Semaphores/.git/HEAD
+// ./Simple-Semaphores/.git/hooks
+// ./Simple-Semaphores/.git/hooks/pre-push.sample
+// ./Simple-Semaphores/.git/hooks/pre-rebase.sample
+// ./Simple-Semaphores/.git/hooks/applypatch-msg.sample
+// ./Simple-Semaphores/.git/hooks/pre-commit.sample
+// ./Simple-Semaphores/.git/hooks/post-update.sample
+// ./Simple-Semaphores/.git/hooks/commit-msg.sample
+// ./Simple-Semaphores/.git/hooks/pre-applypatch.sample
+// ./Simple-Semaphores/.git/hooks/update.sample
+// ./Simple-Semaphores/.git/hooks/prepare-commit-msg.sample
+// ./Simple-Semaphores/.git/description
+// ./Simple-Semaphores/.git/objects
+// ./Simple-Semaphores/.git/objects/info
+// ./Simple-Semaphores/.git/objects/pack
+// ./Simple-Semaphores/.git/config
+// ./pingpong.c
+// ./.git
+// ./.git/info
+// ./.git/info/exclude
+// ./.git/logs
+// ./.git/logs/refs
+// ./.git/logs/refs/heads
+// ./.git/logs/refs/heads/main
+// ./.git/logs/refs/remotes
+// ./.git/logs/refs/remotes/origin
+// ./.git/logs/refs/remotes/origin/main
+// ./.git/logs/HEAD
+// ./.git/branches
+// ./.git/refs
+// ./.git/refs/tags
+// ./.git/refs/heads
+// ./.git/refs/heads/main
+// ./.git/refs/remotes
+// ./.git/refs/remotes/origin
+// ./.git/refs/remotes/origin/main
+// ./.git/COMMIT_EDITMSG
+// ./.git/HEAD
+// ./.git/hooks
+// ./.git/hooks/pre-push.sample
+// ./.git/hooks/pre-rebase.sample
+// ./.git/hooks/applypatch-msg.sample
+// ./.git/hooks/pre-commit.sample
+// ./.git/hooks/post-update.sample
+// ./.git/hooks/commit-msg.sample
+// ./.git/hooks/pre-applypatch.sample
+// ./.git/hooks/update.sample
+// ./.git/hooks/prepare-commit-msg.sample
+// ./.git/description
+// ./.git/objects
+// ./.git/objects/info
+// ./.git/objects/66
+// ./.git/objects/66/73fba744a21ebcc51952c656991671b7c84f63
+// ./.git/objects/69
+// ./.git/objects/69/87dc5c8c9e3d6be1098394ef238f1adef566f3
+// ./.git/objects/pack
+// ./.git/objects/15
+// ./.git/objects/15/863e6871c4e0305dcba05d1583a08a663d7041
+// ./.git/objects/27
+// ./.git/objects/27/ecd6afd7cbc9995d0b09c17dc10d88b522cff8
+// ./.git/config
+// ./.git/index
+// ./out
+// ./shell.c
+// ./Project-1-CPCS-351
+// ./Project-1-CPCS-351/jiffies
+// ./Project-1-CPCS-351/jiffies/Jiffies.c
+// ./Project-1-CPCS-351/jiffies/Makefile
+// ./Project-1-CPCS-351/seconds
+// ./Project-1-CPCS-351/seconds/Seconds.c
+// ./Project-1-CPCS-351/seconds/Makefile
+// ./Project-1-CPCS-351/.git
+// ./Project-1-CPCS-351/.git/info
+// ./Project-1-CPCS-351/.git/info/exclude
+// ./Project-1-CPCS-351/.git/logs
+// ./Project-1-CPCS-351/.git/logs/refs
+// ./Project-1-CPCS-351/.git/logs/refs/heads
+// ./Project-1-CPCS-351/.git/logs/refs/heads/master
+// ./Project-1-CPCS-351/.git/logs/refs/remotes
+// ./Project-1-CPCS-351/.git/logs/refs/remotes/origin
+// ./Project-1-CPCS-351/.git/logs/refs/remotes/origin/master
+// ./Project-1-CPCS-351/.git/logs/HEAD
+// ./Project-1-CPCS-351/.git/branches
+// ./Project-1-CPCS-351/.git/refs
+// ./Project-1-CPCS-351/.git/refs/tags
+// ./Project-1-CPCS-351/.git/refs/heads
+// ./Project-1-CPCS-351/.git/refs/heads/master
+// ./Project-1-CPCS-351/.git/refs/remotes
+// ./Project-1-CPCS-351/.git/refs/remotes/origin
+// ./Project-1-CPCS-351/.git/refs/remotes/origin/master
+// ./Project-1-CPCS-351/.git/COMMIT_EDITMSG
+// ./Project-1-CPCS-351/.git/HEAD
+// ./Project-1-CPCS-351/.git/hooks
+// ./Project-1-CPCS-351/.git/hooks/pre-push.sample
+// ./Project-1-CPCS-351/.git/hooks/pre-rebase.sample
+// ./Project-1-CPCS-351/.git/hooks/applypatch-msg.sample
+// ./Project-1-CPCS-351/.git/hooks/pre-commit.sample
+// ./Project-1-CPCS-351/.git/hooks/post-update.sample
+// ./Project-1-CPCS-351/.git/hooks/commit-msg.sample
+// ./Project-1-CPCS-351/.git/hooks/pre-applypatch.sample
+// ./Project-1-CPCS-351/.git/hooks/update.sample
+// ./Project-1-CPCS-351/.git/hooks/prepare-commit-msg.sample
+// ./Project-1-CPCS-351/.git/description
+// ./Project-1-CPCS-351/.git/objects
+// ./Project-1-CPCS-351/.git/objects/info
+// ./Project-1-CPCS-351/.git/objects/35
+// ./Project-1-CPCS-351/.git/objects/35/cf6cae5a176b7113faeb2fc1b173bb4e1a6ce8
+// ./Project-1-CPCS-351/.git/objects/a0
+// ./Project-1-CPCS-351/.git/objects/a0/5a2ae473fd679ea384d7e158aaba17ea7088bb
+// ./Project-1-CPCS-351/.git/objects/b4
+// ./Project-1-CPCS-351/.git/objects/b4/1277022fd0af894e38bfee214e36a784db194a
+// ./Project-1-CPCS-351/.git/objects/pack
+// ./Project-1-CPCS-351/.git/objects/41
+// ./Project-1-CPCS-351/.git/objects/41/66377ea0891bf9e63bd4e591d5f66e315c713e
+// ./Project-1-CPCS-351/.git/objects/ef
+// ./Project-1-CPCS-351/.git/objects/ef/b8dc22df74f52ea6b55a05f3cd8e1aa2e054ad
+// ./Project-1-CPCS-351/.git/objects/e5
+// ./Project-1-CPCS-351/.git/objects/e5/4b007150452fbdc5536ee95eded5036b940258
+// ./Project-1-CPCS-351/.git/objects/16
+// ./Project-1-CPCS-351/.git/objects/16/8e554d50010f5d00bc770b8e329a571466c195
+// ./Project-1-CPCS-351/.git/objects/a2
+// ./Project-1-CPCS-351/.git/objects/a2/24771c7b68fe4a203c6d9587dc6ffa9b453cd3
+// ./Project-1-CPCS-351/.git/config
+// ./Project-1-CPCS-351/.git/index
+// ./CriticalRegion.c
+// ./shell_skeleton.c
+// ./mutexes.c
+//osh> exit
 //----------------------------------------------------------------------
 //END OF OUTPUT FOR shell.c
 //----------------------------------------------------------------------
